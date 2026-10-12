@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARADA – Yönetim Paneli</title>
+<style>
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#F6F4EE;color:#181A24;padding:28px 20px}
+  .kap{max-width:900px;margin:0 auto}
+  h1{margin:0 0 6px} .alt{opacity:.7;margin:0 0 18px}
+  .ust{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  input{padding:11px 14px;border:1px solid #cfd2dc;border-radius:12px;font-size:15px}
+  button{background:#181A24;color:#C4F068;border:0;border-radius:999px;padding:11px 20px;font-weight:700;cursor:pointer}
+  button.lime{background:#C4F068;color:#181A24}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:14px;overflow:hidden}
+  /* F-Pattern: en önemli sütun (isim) solda */
+  th{background:#181A24;color:#fff;text-align:left;padding:12px} td{padding:12px;border-bottom:1px solid #eee;vertical-align:top}
+  #durum{margin:10px 0;min-height:20px}
+</style>
+</head>
+<body><div class="kap">
+  <h1>Yönetim Paneli</h1>
+  <p class="alt">Sohbet asistanından gelen müşteri adayları (lead).</p>
+  <div class="ust">
+    <input id="anahtar" type="password" placeholder="Yönetici şifresi">
+    <button id="btnYukle">Listeyi getir</button>
+    <button class="lime" id="btnCsv">CSV indir (yedek)</button>
+  </div>
+  <div id="durum"></div>
+  <table><thead><tr><th>İsim</th><th>Telefon</th><th>Mesaj</th><th>Tarih (UTC)</th></tr></thead><tbody id="govde"></tbody></table>
+</div>
+<script>
+  let leadler = [];
+  document.getElementById('btnYukle').onclick = async () => {
+    const durum = document.getElementById('durum'), govde = document.getElementById('govde');
+    durum.textContent = 'Yükleniyor...';
+    try{
+      const r = await fetch('/api/leads?anahtar=' + encodeURIComponent(document.getElementById('anahtar').value));
+      const v = await r.json();
+      if(!v.basari){ durum.textContent = v.hata; return; }
+      leadler = v.leadler; govde.innerHTML = '';
+      leadler.forEach(l => {
+        const tr = document.createElement('tr');
+        [l.isim, l.telefon, l.mesaj || '', l.tarih].forEach(m => { const td = document.createElement('td'); td.textContent = m; tr.appendChild(td); }); // textContent: güvenli
+        govde.appendChild(tr);
+      });
+      durum.textContent = leadler.length + ' kayıt.';
+    }catch(e){ durum.textContent = 'Liste alınamadı.'; }
+  };
+  // Canlıda veriler silinebilir (ücretsiz Render); düzenli olarak CSV yedeği alın
+  document.getElementById('btnCsv').onclick = () => {
+    if(!leadler.length) return;
+    const kacis = s => '"' + String(s ?? '').replace(/"/g,'""') + '"';
+    const csv = '\ufeffisim,telefon,mesaj,tarih\n' + leadler.map(l => [l.isim,l.telefon,l.mesaj,l.tarih].map(kacis).join(',')).join('\n');
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+    a.download = 'arada_leadler.csv'; a.click();
+  };
+</script></body></html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARADA – Aradaki zamanı yaşa</title>
+<style>
+  :root{--lacivert:#181A24;--lime:#C4F068;--turuncu:#FF8351;--krem:#F6F4EE}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--krem);color:var(--lacivert);min-height:100vh;
+       background-image:radial-gradient(circle at 85% 15%,rgba(196,240,104,.55),transparent 38%),radial-gradient(circle at 10% 85%,rgba(255,131,81,.25),transparent 30%)}
+  /* Z-Pattern: logo sol üst, sohbet sağ, form altta */
+  .sayfa{max-width:1000px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:1fr 1.2fr;gap:28px;align-items:start}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo span{font-weight:900;font-size:30px;letter-spacing:2px}
+  h1{font-size:34px;line-height:1.15;margin:28px 0 10px}
+  p.alt{opacity:.75;margin:0}
+  .sohbet{background:rgba(255,255,255,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+          border:1px solid rgba(255,255,255,.8);border-radius:22px;padding:20px;box-shadow:0 8px 30px rgba(0,0,0,.08)}
+  #cevap{min-height:150px;max-height:320px;overflow:auto;background:rgba(255,255,255,.7);border-radius:14px;padding:14px;line-height:1.5;white-space:pre-wrap}
+  .satir{display:flex;gap:8px;margin-top:12px}
+  input{flex:1;padding:12px 14px;border:1px solid #cfd2dc;border-radius:12px;font-size:15px}
+  button{background:var(--lacivert);color:var(--lime);border:0;border-radius:999px;padding:12px 22px;font-weight:700;cursor:pointer;font-size:15px}
+  button.lime{background:var(--lime);color:var(--lacivert)}
+  .form{grid-column:1 / -1;background:var(--lacivert);color:#fff;border-radius:22px;padding:22px}
+  .form h3{margin:0 0 12px;color:var(--lime)}
+  #durum{margin-top:10px;min-height:20px;color:var(--lime)}
+  @media(max-width:760px){.sayfa{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="sayfa">
+  <div>
+    <div class="logo">
+      <svg viewBox="5 -10 110 144" height="56"><path d="M 60,15 L 110,130 L 75,130 L 60,90 L 45,130 L 10,130 Z" fill="#181A24"/><path d="M 60,90 L 75,130 L 45,130 Z" fill="#C4F068"/><circle cx="60" cy="0" r="7" fill="#FF8351"/></svg>
+      <span>ARADA</span>
+    </div>
+    <h1>Şu an kaç dakikan var?</h1>
+    <p class="alt">Aradaki zamanı yaşa. Asistanımıza süreni ve ruh halini yaz, sana uygun 3 fikir önersin.</p>
+  </div>
+  <div class="sohbet">
+    <div id="cevap">Merhaba! Şu an ne kadar boş zamanın var?</div>
+    <div class="satir">
+      <input id="girisMesaj" placeholder="Örn: 45 dakikam var, sakin bir şey istiyorum">
+      <button id="btnSor">Sor</button>
+    </div>
+  </div>
+  <div class="form">
+    <h3>Sana özel öneriler için iletişim bırak</h3>
+    <div class="satir">
+      <input id="inputIsim" placeholder="Adın">
+      <input id="inputTelefon" placeholder="Telefon">
+      <button class="lime" id="btnKaydet">Kaydet</button>
+    </div>
+    <div id="durum"></div>
+  </div>
+</div>
+<script>
+  // Konuşma geçmişi (yapay zekâ önceki mesajları hatırlasın diye)
+  let gecmis = [];
+  async function post(yol, veri){
+    const r = await fetch(yol, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(veri)});
+    return r.json();
+  }
+  document.getElementById('btnSor').onclick = async () => {
+    const kutu = document.getElementById('girisMesaj'); const mesaj = kutu.value.trim();
+    if(!mesaj) return;
+    const cevapKutusu = document.getElementById('cevap'); cevapKutusu.textContent = 'Düşünüyorum...';
+    try{
+      const v = await post('/api/sohbet', {mesaj, gecmis});
+      if(v.basari){ cevapKutusu.textContent = v.cevap; gecmis.push({role:'user',content:mesaj},{role:'assistant',content:v.cevap}); kutu.value=''; }
+      else cevapKutusu.textContent = v.hata;
+    }catch(e){ cevapKutusu.textContent = 'Bağlantı kurulamadı, lütfen tekrar deneyin.'; }
+  };
+  document.getElementById('btnKaydet').onclick = async () => {
+    const isim = document.getElementById('inputIsim').value.trim(), telefon = document.getElementById('inputTelefon').value.trim();
+    const sonMesaj = gecmis.length ? gecmis[gecmis.length-2].content : '';
+    const durum = document.getElementById('durum');
+    try{
+      const v = await post('/api/leads', {isim, telefon, mesaj: sonMesaj});
+      durum.textContent = v.basari ? 'Teşekkürler! Bilgilerin kaydedildi.' : v.hata;
+    }catch(e){ durum.textContent = 'Kaydedilemedi, lütfen tekrar deneyin.'; }
+  };
+</script>
+</body>
+</html>

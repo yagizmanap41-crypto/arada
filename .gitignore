@@ -1,0 +1,8 @@
+# Gizli anahtarlar GitHub'a ASLA yüklenmez
+.env
+# Sanal ortam ve geçici dosyalar
+venv/
+__pycache__/
+*.pyc
+# Yerel veritabanı (müşteri bilgileri içerir)
+*.db
